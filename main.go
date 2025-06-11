@@ -26,6 +26,7 @@ func main() {
 
 func commandEntry(fileName string, argsCmd []string) error {
 	isCsv := true
+	hasD := false
 	file, err := os.Open(fileName)
 	if err != nil {
 		return err
@@ -39,7 +40,12 @@ func commandEntry(fileName string, argsCmd []string) error {
 
 	for _, rec := range argsCmd {
 		if strings.HasPrefix(rec, "-f") {
-			err = commandField(reader, argsCmd[0], isCsv)
+			fieldString := strings.Trim(argsCmd[0], "-f")
+			err = commandField(reader, fieldString, isCsv, hasD)
+		}
+		if strings.HasPrefix(rec, "-d") {
+			hasD = true
+			err = commandField(reader, argsCmd[0], isCsv, hasD)
 		}
 	}
 
@@ -49,9 +55,15 @@ func commandEntry(fileName string, argsCmd []string) error {
 	return nil
 }
 
-func commandField(reader *csv.Reader, cmd string, isCsv bool) error {
+func commandField(reader *csv.Reader, cmd string, isCsv, hasD bool) error {
 	fieldString := strings.Trim(cmd, "-f")
 	field, err := strconv.Atoi(fieldString)
+	splitStr := "\t"
+	if hasD {
+		fmt.Println(strings.Trim(cmd, "-d"))
+		splitStr = strings.Trim(cmd, "-d")
+	}
+	fmt.Println(splitStr)
 	if err != nil {
 		return err
 	}
@@ -69,11 +81,7 @@ func commandField(reader *csv.Reader, cmd string, isCsv bool) error {
 		}
 		// fmt.Println(record)
 		var row []string
-		if isCsv {
-			row = strings.Split(record[0], " ")
-		} else {
-			row = strings.Split(record[0], "\t")
-		}
+		row = strings.Split(record[0], splitStr)
 
 		for i, rec := range row {
 			if i+1 == field {
