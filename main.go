@@ -27,15 +27,27 @@ func commandEntry(argsCmd []string) error {
 	isCsv := true
 	hasD := false
 	hasF := false
-	fFlag := 0
+	// fFlag := 0
 	dFlag := "\t"
 	fileName := ""
+	var fList []int
+	// fmt.Println(argsCmd)
+	// for _, rec := range argsCmd {
+	// 	fmt.Println(rec)
+	// }
+	// return nil
 	for i, rec := range argsCmd {
 		if strings.HasPrefix(rec, "-f") {
-			fieldString, err := strconv.Atoi(strings.Trim(argsCmd[i], "-f"))
+			filedArgs := ""
+			if rec == "-f" && i+1 < len(argsCmd) {
+				filedArgs = argsCmd[i+1]
+			} else {
+				filedArgs = strings.Trim(argsCmd[i], "-f")
+			}
+			fList = getFiledNum(filedArgs)
+
 			hasF = true
-			check(err)
-			fFlag = fieldString
+
 		}
 		if strings.HasPrefix(rec, "-d") {
 			hasD = true
@@ -66,20 +78,19 @@ func commandEntry(argsCmd []string) error {
 	defer file.Close()
 	reader := csv.NewReader(file)
 	if isCsv {
-		commandCSV(reader, fFlag, hasD, dFlag)
+		commandCSV(reader, fList, hasD, dFlag)
 	} else {
-		commandTSV(reader, fFlag, hasD, dFlag)
+		commandTSV(reader, fList, hasD, dFlag)
 	}
 
 	if err != nil {
 		return err
 	}
-	fmt.Println(hasD)
 	return nil
 }
 
-func commandCSV(reader *csv.Reader, field int, hasD bool, dFlag string) error {
-	if field == 0 {
+func commandCSV(reader *csv.Reader, field []int, hasD bool, dFlag string) error {
+	if len(field) == 0 {
 		return errors.New("Give correct column number > 0")
 	}
 	for {
@@ -91,22 +102,26 @@ func commandCSV(reader *csv.Reader, field int, hasD bool, dFlag string) error {
 			return err
 		}
 		if !hasD {
-			fmt.Println(record)
+			fmt.Println(record, ",")
 			continue
 		}
 		if dFlag != "," {
-			fmt.Println(record)
+			fmt.Println(record, ",")
 			continue
 		}
-		fmt.Println(record[field-1])
+		for _, r := range field {
+			fmt.Print(record[r-1], ",")
+		}
+		fmt.Println()
+
 	}
 
 	return nil
 }
 
-func commandTSV(reader *csv.Reader, field int, hasD bool, dFlag string) error {
+func commandTSV(reader *csv.Reader, field []int, hasD bool, dFlag string) error {
 
-	if field == 0 {
+	if len(field) == 0 {
 		return errors.New("Give correct column number > 0")
 	}
 	for {
@@ -119,17 +134,20 @@ func commandTSV(reader *csv.Reader, field int, hasD bool, dFlag string) error {
 		}
 
 		if dFlag != "\t" {
-			fmt.Println(record)
+			fmt.Println(record, "\t")
 			continue
 		}
 		row := strings.Split(record[0], "\t")
 		for i, rec := range row {
-			if i+1 == field {
-				fmt.Println(rec)
+			for _, r := range field {
+				if i+1 == r {
+					fmt.Print(rec, "\t")
+				}
+
 			}
+
 		}
-		// fmt.Println(record)
-		// fmt.Println(len(record))
+		fmt.Println()
 	}
 	return nil
 }
@@ -138,4 +156,21 @@ func check(e error) {
 	if e != nil {
 		panic(e)
 	}
+}
+
+func getFiledNum(str string) []int {
+
+	temp := make([]string, 0)
+	if strings.Contains(str, " ") {
+		temp = strings.Split(str, " ")
+	} else {
+		temp = strings.Split(str, ",")
+	}
+	listField := make([]int, len(temp))
+	for i, r := range temp {
+		tempInt, err := strconv.Atoi(r)
+		check(err)
+		listField[i] = tempInt
+	}
+	return listField
 }
