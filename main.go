@@ -1,24 +1,21 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	if len(os.Args) >= 1 {
-		if strings.Contains(os.Args[len(os.Args)-1], ".csv") || strings.Contains(os.Args[len(os.Args)-1], ".tsv") { //has file name
+	if len(os.Args) > 1 {
 
-			// fmt.Println(argsCmd)
-			// fmt.Println(fileName)
-			check(commandEntry(os.Args))
-		} else {
-			return
-		}
+		check(commandEntry(os.Args))
+
 	}
 
 }
@@ -27,15 +24,11 @@ func commandEntry(argsCmd []string) error {
 	isCsv := true
 	hasD := false
 	hasF := false
-	// fFlag := 0
+	hasFile := false
 	dFlag := "\t"
 	fileName := ""
 	var fList []int
-	// fmt.Println(argsCmd)
-	// for _, rec := range argsCmd {
-	// 	fmt.Println(rec)
-	// }
-	// return nil
+
 	for i, rec := range argsCmd {
 		if strings.HasPrefix(rec, "-f") {
 			filedArgs := ""
@@ -56,9 +49,9 @@ func commandEntry(argsCmd []string) error {
 				check(errors.New("Give a delimiter for -d"))
 
 			}
-			// fmt.Println(dFlag)
 		}
 		if strings.Contains(rec, ".csv") || strings.Contains(rec, ".tsv") {
+			hasFile = true
 			if strings.Contains(rec, ".csv") {
 				isCsv = true
 			} else {
@@ -67,25 +60,35 @@ func commandEntry(argsCmd []string) error {
 			fileName = argsCmd[i]
 		}
 	}
+
+	var reader *csv.Reader
+
+	if !hasFile {
+
+		data, err := readFromConsole()
+		check(err)
+		reader = csv.NewReader(strings.NewReader(string(data)))
+		if strings.Contains(string(data), "\t") {
+			isCsv = false
+		}
+	} else {
+		file, err := os.Open(fileName)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		reader = csv.NewReader(file)
+	}
 	if !hasF {
 		check(errors.New("Give an -f paramter"))
 	}
 
-	file, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	reader := csv.NewReader(file)
 	if isCsv {
 		commandCSV(reader, fList, hasD, dFlag)
 	} else {
 		commandTSV(reader, fList, hasD, dFlag)
 	}
 
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -132,7 +135,6 @@ func commandTSV(reader *csv.Reader, field []int, hasD bool, dFlag string) error 
 			}
 			return err
 		}
-
 		if dFlag != "\t" {
 			fmt.Println(record, "\t")
 			continue
@@ -143,12 +145,11 @@ func commandTSV(reader *csv.Reader, field []int, hasD bool, dFlag string) error 
 				if i+1 == r {
 					fmt.Print(rec, "\t")
 				}
-
 			}
-
 		}
 		fmt.Println()
 	}
+
 	return nil
 }
 
@@ -173,4 +174,9 @@ func getFiledNum(str string) []int {
 		listField[i] = tempInt
 	}
 	return listField
+}
+
+func readFromConsole() ([]byte, error) {
+	reader := bufio.NewReader(os.Stdin)
+	return io.ReadAll(reader)
 }
